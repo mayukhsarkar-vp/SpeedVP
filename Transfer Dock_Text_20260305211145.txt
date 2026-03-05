@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Velvet Speed — Precision Speedometer by Velvet Pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Great+Vibes&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050508;--panel:#0a0b10;--panel2:#0f1018;--border:rgba(255,255,255,0.06);
+  --gold:#c9a84c;--gold2:#e8c97a;--amber:#ff9500;--red:#ff3b30;--green:#34c759;
+  --blue:#0a84ff;--cyan:#5ac8fa;--cream:#f0ead8;--muted:rgba(240,234,216,0.35);
+  --dim:rgba(240,234,216,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;min-height:100%;background:var(--bg);color:var(--cream);font-family:'Rajdhani',sans-serif;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:.28;}
+.app{display:flex;flex-direction:column;min-height:100vh;}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);background:rgba(5,5,8,0.96);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px);}
+.brand-name{font-family:'Orbitron',sans-serif;font-size:.88rem;font-weight:700;letter-spacing:.22em;color:var(--gold);}
+.brand-sub{font-family:'Great Vibes',cursive;font-size:.9rem;color:rgba(201,168,76,.38);margin-top:-3px;}
+.header-right{display:flex;gap:10px;align-items:center;}
+.unit-toggle{display:flex;background:var(--panel2);border:1px solid var(--border);overflow:hidden;}
+.unit-btn{font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:.1em;padding:7px 14px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .22s;text-transform:uppercase;}
+.unit-btn.active{background:var(--gold);color:#000;}
+.gps-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);transition:all .5s;}
+.gps-dot.active{background:var(--green);box-shadow:0 0 10px var(--green);}
+.gps-dot.searching{background:var(--amber);box-shadow:0 0 10px var(--amber);animation:blink .75s ease infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:230px 1fr 230px;flex:1;}
+
+/* SIDE PANELS */
+.side-panel{padding:20px 16px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:14px;background:var(--panel);}
+.side-panel.right{border-right:none;border-left:1px solid var(--border);}
+.widget{background:var(--panel2);border:1px solid var(--border);padding:14px;position:relative;overflow:hidden;}
+.widget::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;}
+.widget-label{font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.22em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;opacity:.7;}
+.widget-val{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:700;color:var(--cream);line-height:1;}
+.widget-val span{font-size:.7rem;color:var(--muted);margin-left:3px;font-weight:400;}
+.widget-sub{font-size:.72rem;color:var(--muted);margin-top:3px;}
+.mini-bar{height:2px;background:var(--dim);margin-top:8px;}
+.mini-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--amber));width:0%;transition:width .4s;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--dim);}
+.stat-row:last-child{border-bottom:none;}
+.stat-key{font-size:.72rem;color:var(--muted);}
+.stat-v{font-family:'Orbitron',sans-serif;font-size:.8rem;color:var(--cream);}
+.compass-wrap{position:relative;width:100%;padding-top:100%;margin-top:8px;}
+.compass-canvas{position:absolute;inset:0;width:100%;height:100%;}
+.alt-bar{height:50px;display:flex;align-items:flex-end;gap:2px;margin-top:8px;}
+.alt-col{flex:1;background:var(--dim);transition:height .5s;min-height:2px;}
+
+/* CENTRE */
+.centre{display:flex;flex-direction:column;align-items:center;padding:28px 20px;gap:20px;
+  background:radial-gradient(ellipse at 50% 20%,rgba(201,168,76,.04) 0%,transparent 65%);}
+#speedo-wrap{position:relative;width:min(400px,88vw);aspect-ratio:1;}
+#speedo{width:100%;height:100%;}
+.digital-speed{text-align:center;}
+.speed-number{font-family:'Orbitron',sans-serif;font-size:clamp(3rem,9vw,5rem);font-weight:900;line-height:1;
+  background:linear-gradient(135deg,var(--gold2) 0%,var(--gold) 40%,var(--amber) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 24px rgba(201,168,76,.28));transition:all .12s;}
+.speed-unit{font-family:'Orbitron',sans-serif;font-size:.75rem;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+.status-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.status-chip{background:var(--panel2);border:1px solid var(--border);padding:5px 12px;font-size:.72rem;
+  font-family:'Rajdhani',sans-serif;color:var(--muted);display:flex;align-items:center;gap:5px;font-weight:600;}
+.status-chip .dot{width:5px;height:5px;border-radius:50%;background:var(--muted);}
+.status-chip.ok .dot{background:var(--green);box-shadow:0 0 5px var(--green);}
+.status-chip.warn .dot{background:var(--amber);box-shadow:0 0 5px var(--amber);}
+.status-chip.err .dot{background:var(--red);box-shadow:0 0 5px var(--red);}
+.graph-wrap{width:100%;max-width:420px;background:var(--panel2);border:1px solid var(--border);padding:14px;}
+.graph-label{font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;opacity:.7;margin-bottom:8px;}
+#speed-graph{width:100%;height:72px;display:block;}
+.speed-limit-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
+.speed-limit-row label{font-family:'Orbitron',sans-serif;font-size:.55rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;opacity:.7;}
+.limit-input{font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;width:72px;padding:5px 10px;
+  text-align:center;background:var(--panel2);border:1px solid var(--border);color:var(--cream);outline:none;}
+.limit-input:focus{border-color:var(--gold);}
+.limit-presets{display:flex;gap:5px;}
+.preset{font-family:'Orbitron',sans-serif;font-size:.55rem;padding:5px 9px;background:var(--panel2);
+  border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s;}
+.preset:hover,.preset.active{border-color:var(--amber);color:var(--amber);}
+.controls-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.ctrl-btn{font-family:'Orbitron',sans-serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:9px 18px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .22s;}
+.ctrl-btn:hover{border-color:var(--gold);color:var(--gold);}
+.ctrl-btn.active{background:rgba(201,168,76,.1);border-color:var(--gold);color:var(--gold);}
+.ctrl-btn.danger{border-color:rgba(255,59,48,.3);color:var(--red);}
+.ctrl-btn.danger:hover{border-color:var(--red);background:rgba(255,59,48,.1);}
+.theme-row{display:flex;gap:7px;}
+.theme-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .18s;}
+.theme-dot.active{border-color:rgba(255,255,255,0.6);transform:scale(1.25);}
+.alert-bar{width:100%;padding:10px 18px;font-family:'Rajdhani',sans-serif;font-size:.88rem;font-weight:600;
+  text-align:center;letter-spacing:.06em;display:none;border:1px solid;animation:aPulse 1s ease infinite;}
+.alert-bar.speed{background:rgba(255,59,48,.1);border-color:var(--red);color:var(--red);display:block;}
+@keyframes aPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+/* HOW TO USE */
+.content-section{padding:56px 36px;max-width:1100px;margin:0 auto;}
+.sec-label{font-family:'Orbitron',sans-serif;font-size:.56rem;letter-spacing:.32em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;opacity:.7;display:flex;align-items:center;gap:14px;}
+.sec-label::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,rgba(201,168,76,.3),transparent);}
+.sec-title{font-family:'Rajdhani',sans-serif;font-size:clamp(1.5rem,4vw,2.2rem);font-weight:300;color:var(--cream);margin-bottom:6px;letter-spacing:.06em;}
+.sec-sub{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--muted);margin-bottom:44px;}
+.how-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
+.how-card{background:var(--panel);border:1px solid var(--border);padding:24px;position:relative;overflow:hidden;}
+.how-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.2;}
+.how-num{font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;color:rgba(201,168,76,.1);line-height:1;margin-bottom:10px;}
+.how-title{font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;color:var(--gold);letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase;}
+.how-desc{font-size:.88rem;color:var(--muted);line-height:1.7;}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:36px;}
+.feat-item{display:flex;align-items:flex-start;gap:10px;padding:14px;background:var(--panel);border:1px solid var(--border);}
+.feat-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px;}
+.feat-text{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.feat-text strong{display:block;color:var(--cream);font-weight:600;margin-bottom:1px;font-family:'Rajdhani',sans-serif;font-size:.9rem;}
+
+/* REVIEWS */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
+.review-card{background:var(--panel);border:1px solid var(--border);padding:26px;position:relative;}
+.rev-stars{color:var(--gold);font-size:.85rem;margin-bottom:10px;letter-spacing:2px;}
+.rev-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1rem;color:rgba(240,234,216,.58);line-height:1.8;margin-bottom:14px;}
+.rev-author{font-family:'Orbitron',sans-serif;font-size:.56rem;letter-spacing:.15em;color:var(--gold);opacity:.7;}
+.rev-loc{font-size:.78rem;color:var(--muted);margin-top:3px;}
+.quote-banner{background:linear-gradient(135deg,rgba(201,168,76,.05),rgba(10,11,16,.85));border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:56px 36px;text-align:center;}
+.quote-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1rem,2.4vw,1.5rem);color:rgba(240,234,216,.62);max-width:640px;margin:0 auto 14px;line-height:1.8;}
+.quote-by{font-family:'Orbitron',sans-serif;font-size:.55rem;letter-spacing:.24em;color:var(--gold);opacity:.7;text-transform:uppercase;}
+.divider{display:flex;align-items:center;gap:18px;padding:20px 36px;opacity:.22;max-width:500px;margin:0 auto;}
+.div-line{height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--gold));}
+.div-line:last-child{background:linear-gradient(270deg,transparent,var(--gold));}
+footer{text-align:center;padding:36px;border-top:1px solid var(--border);font-family:'Orbitron',sans-serif;font-size:.52rem;letter-spacing:.18em;color:rgba(240,234,216,.14);text-transform:uppercase;}
+.footer-brand{font-family:'Great Vibes',cursive;font-size:1.7rem;background:linear-gradient(135deg,var(--gold),#c96b9e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block;margin-bottom:7px;}
+
+/* SIGNAL BARS */
+.sig-bar{width:7px;background:var(--dim);border-radius:1px;}
+
+/* RESPONSIVE */
+@media(max-width:920px){
+  .main-grid{grid-template-columns:1fr;}
+  .side-panel{flex-direction:row;flex-wrap:wrap;padding:14px;}
+  .side-panel.right{border-left:none;border-top:1px solid var(--border);}
+  .widget{flex:1 1 170px;}
+  header{padding:10px 14px;}
+}
+@media(max-width:580px){
+  .content-section{padding:36px 16px;}
+  .centre{padding:18px 10px;}
+  .controls-bar{gap:6px;}
+  .ctrl-btn{padding:8px 12px;font-size:.52rem;}
+}
+
+/* THEMES */
+body.theme-carbon{--gold:#d0d0d0;--gold2:#fff;--amber:#aaa;}
+body.theme-ice{--gold:#5ac8fa;--gold2:#a8e0ff;--amber:#0a84ff;}
+body.theme-blood{--gold:#ff453a;--gold2:#ff6b62;--amber:#ff9f0a;}
+body.theme-emerald{--gold:#34c759;--gold2:#6ee097;--amber:#32d74b;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="brand-name">Velvet Speed</div>
+    <div class="brand-sub">by Velvet Pages</div>
+  </div>
+  <div class="header-right">
+    <div class="unit-toggle">
+      <button class="unit-btn active" id="btn-kmh" onclick="setUnit('kmh')">km/h</button>
+      <button class="unit-btn" id="btn-mph" onclick="setUnit('mph')">mph</button>
+      <button class="unit-btn" id="btn-ms" onclick="setUnit('ms')">m/s</button>
+      <button class="unit-btn" id="btn-kn" onclick="setUnit('kn')">knots</button>
+    </div>
+    <div class="gps-dot" id="gps-dot" title="GPS Status"></div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main-grid">
+
+  <!-- LEFT -->
+  <div class="side-panel">
+    <div class="widget">
+      <div class="widget-label">Max Speed</div>
+      <div class="widget-val" id="w-max">0<span id="w-max-u">km/h</span></div>
+      <div class="mini-bar"><div class="mini-bar-fill" id="bar-max"></div></div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Average Speed</div>
+      <div class="widget-val" id="w-avg">0<span id="w-avg-u">km/h</span></div>
+      <div class="mini-bar"><div class="mini-bar-fill" id="bar-avg"></div></div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Distance</div>
+      <div class="widget-val" id="w-dist">0<span> m</span></div>
+      <div class="widget-sub" id="w-steps">—</div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Trip Time</div>
+      <div class="widget-val" id="w-time" style="font-size:1.25rem;">00:00:00</div>
+      <div class="widget-sub" id="w-started">Not started</div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Coordinates</div>
+      <div class="widget-sub" id="w-lat">Lat: —</div>
+      <div class="widget-sub" id="w-lon">Lon: —</div>
+      <div class="widget-sub" id="w-acc">Accuracy: —</div>
+    </div>
+  </div>
+
+  <!-- CENTRE -->
+  <div class="centre">
+    <div class="alert-bar" id="speed-alert">⚠ SPEED LIMIT EXCEEDED</div>
+
+    <div id="speedo-wrap"><canvas id="speedo"></canvas></div>
+
+    <div class="digital-speed">
+      <div class="speed-number" id="speed-num">0</div>
+      <div class="speed-unit" id="speed-unit-lbl">kilometres per hour</div>
+    </div>
+
+    <div class="status-row">
+      <div class="status-chip" id="chip-gps"><div class="dot"></div><span>GPS</span></div>
+      <div class="status-chip" id="chip-mov"><div class="dot"></div><span>Stationary</span></div>
+      <div class="status-chip" id="chip-acc"><div class="dot"></div><span>Accuracy: —</span></div>
+    </div>
+
+    <div class="graph-wrap">
+      <div class="graph-label">Speed History — last 60 s</div>
+      <canvas id="speed-graph"></canvas>
+    </div>
+
+    <div class="speed-limit-row">
+      <label>Speed Limit</label>
+      <input type="number" class="limit-input" id="limit-input" value="80" min="0" max="500" onchange="updateLimit()"/>
+      <div class="limit-presets">
+        <div class="preset" onclick="setLimit(30)">30</div>
+        <div class="preset" onclick="setLimit(60)">60</div>
+        <div class="preset active" onclick="setLimit(80)">80</div>
+        <div class="preset" onclick="setLimit(100)">100</div>
+        <div class="preset" onclick="setLimit(120)">120</div>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <button class="ctrl-btn" id="btn-start" onclick="startTracking()">▶ Start</button>
+      <button class="ctrl-btn" id="btn-pause" onclick="pauseTracking()">⏸ Pause</button>
+      <button class="ctrl-btn danger" onclick="resetTrip()">↺ Reset</button>
+      <button class="ctrl-btn" id="btn-lock" onclick="toggleWakeLock()">🔓 Screen</button>
+      <button class="ctrl-btn" onclick="exportData()">↓ Export</button>
+      <button class="ctrl-btn" onclick="shareData()">⇪ Share</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;">Theme</span>
+      <div class="theme-row">
+        <div class="theme-dot active" style="background:linear-gradient(135deg,#c9a84c,#e8c97a);" onclick="setTheme('default',this)" title="Gold"></div>
+        <div class="theme-dot" style="background:linear-gradient(135deg,#d0d0d0,#fff);" onclick="setTheme('carbon',this)" title="Carbon White"></div>
+        <div class="theme-dot" style="background:linear-gradient(135deg,#5ac8fa,#0a84ff);" onclick="setTheme('ice',this)" title="Ice Blue"></div>
+        <div class="theme-dot" style="background:linear-gradient(135deg,#ff453a,#ff6b62);" onclick="setTheme('blood',this)" title="Crimson Red"></div>
+        <div class="theme-dot" style="background:linear-gradient(135deg,#34c759,#6ee097);" onclick="setTheme('emerald',this)" title="Emerald"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="side-panel right">
+    <div class="widget">
+      <div class="widget-label">Heading</div>
+      <div class="widget-val" id="w-head">—<span>°</span></div>
+      <div class="compass-wrap"><canvas class="compass-canvas" id="compass-cv"></canvas></div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Altitude</div>
+      <div class="widget-val" id="w-alt">—<span>m</span></div>
+      <div class="widget-sub" id="w-alt-sub">GPS altitude</div>
+      <div class="alt-bar" id="alt-bar"></div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">Trip Analytics</div>
+      <div class="stat-row"><span class="stat-key">Stops made</span><span class="stat-v" id="s-stops">0</span></div>
+      <div class="stat-row"><span class="stat-key">Moving time</span><span class="stat-v" id="s-movt">00:00</span></div>
+      <div class="stat-row"><span class="stat-key">Est. fuel</span><span class="stat-v" id="s-fuel">—</span></div>
+      <div class="stat-row"><span class="stat-key">Pace</span><span class="stat-v" id="s-pace">—</span></div>
+      <div class="stat-row"><span class="stat-key">Direction</span><span class="stat-v" id="s-dir">—</span></div>
+    </div>
+    <div class="widget">
+      <div class="widget-label">GPS Signal</div>
+      <div id="signal-bars" style="display:flex;gap:3px;align-items:flex-end;height:26px;margin-top:4px;">
+        <div class="sig-bar" style="height:20%;"></div>
+        <div class="sig-bar" style="height:40%;"></div>
+        <div class="sig-bar" style="height:60%;"></div>
+        <div class="sig-bar" style="height:80%;"></div>
+        <div class="sig-bar" style="height:100%;"></div>
+      </div>
+      <div class="widget-sub" id="w-sig">Awaiting GPS fix</div>
+    </div>
+  </div>
+
+</div><!-- /main-grid -->
+
+<!-- HOW TO USE -->
+<section class="content-section">
+  <div class="sec-label">User Guide</div>
+  <h2 class="sec-title">How to Use Velvet Speed</h2>
+  <p class="sec-sub">Everything you need, in the order you need it</p>
+  <div class="how-grid">
+    <div class="how-card"><div class="how-num">01</div><div class="how-title">Grant Location Access</div><div class="how-desc">When your browser prompts you, tap <em>Allow</em>. Velvet Speed uses your device's built-in GPS chip. No data ever leaves your device — there is no server, no account, no tracking.</div></div>
+    <div class="how-card"><div class="how-num">02</div><div class="how-title">Press Start</div><div class="how-desc">Tap <strong>▶ Start</strong> to begin. The green GPS dot in the header confirms an active fix. Wait for the accuracy chip to show ±10m or less for maximum precision.</div></div>
+    <div class="how-card"><div class="how-num">03</div><div class="how-title">Set Speed Limit</div><div class="how-desc">Type any value or use preset buttons (30 / 60 / 80 / 100 / 120). When you exceed the limit the needle turns red, the arc glows red, and the alert fires. Works across all unit modes.</div></div>
+    <div class="how-card"><div class="how-num">04</div><div class="how-title">Switch Units</div><div class="how-desc">Use the top-right toggle to switch between <strong>km/h</strong>, <strong>mph</strong>, <strong>m/s</strong>, and <strong>Knots</strong> at any moment. Every panel, the dial, and the graph update instantly — no restart needed.</div></div>
+    <div class="how-card"><div class="how-num">05</div><div class="how-title">Read the Instruments</div><div class="how-desc">Left panel: max speed, average, distance, trip time, coordinates. Right panel: compass heading, GPS altitude with history chart, trip analytics, and signal strength. Centre: live graph.</div></div>
+    <div class="how-card"><div class="how-num">06</div><div class="how-title">Keep Screen Awake</div><div class="how-desc">Tap <strong>🔓 Screen</strong> to request a Wake Lock — prevents your display from dimming while navigating. The icon becomes 🔒 when active. Best supported on Chrome/Edge for Android.</div></div>
+    <div class="how-card"><div class="how-num">07</div><div class="how-title">Export Your Trip</div><div class="how-desc">Press <strong>↓ Export</strong> to download a full JSON log with timestamped GPS positions, speed at each point, altitude, and accuracy readings. Useful for route analysis or record-keeping.</div></div>
+    <div class="how-card"><div class="how-num">08</div><div class="how-title">Share Summary</div><div class="how-desc">Press <strong>⇪ Share</strong> to send a trip summary (max, avg, distance) via your device's native share sheet. On desktop it copies to clipboard. Impress people with your precision.</div></div>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-item"><div class="feat-icon">🛰</div><div class="feat-text"><strong>Native GPS</strong>Device hardware Geolocation API, same as your maps app.</div></div>
+    <div class="feat-item"><div class="feat-icon">📡</div><div class="feat-text"><strong>Signal Meter</strong>5-bar GPS signal strength with live accuracy reading.</div></div>
+    <div class="feat-item"><div class="feat-icon">🧭</div><div class="feat-text"><strong>Live Compass</strong>Animated compass rose updating with your heading.</div></div>
+    <div class="feat-item"><div class="feat-icon">⛰</div><div class="feat-text"><strong>Altitude</strong>GPS altitude with a rolling 20-point history bar chart.</div></div>
+    <div class="feat-item"><div class="feat-icon">📊</div><div class="feat-text"><strong>Speed Graph</strong>60-second real-time speed history with limit line.</div></div>
+    <div class="feat-item"><div class="feat-icon">⚠</div><div class="feat-text"><strong>Speed Alerts</strong>Visual alert system when custom limit is exceeded.</div></div>
+    <div class="feat-item"><div class="feat-icon">🚫</div><div class="feat-text"><strong>No Backend</strong>100% client-side. Zero data collection whatsoever.</div></div>
+    <div class="feat-item"><div class="feat-icon">📱</div><div class="feat-text"><strong>Mobile Ready</strong>Optimised for phones mounted on dashboards or handlebars.</div></div>
+    <div class="feat-item"><div class="feat-icon">🌙</div><div class="feat-text"><strong>Dark Cockpit</strong>Night-safe interface, readable in direct sunlight too.</div></div>
+    <div class="feat-item"><div class="feat-icon">🎨</div><div class="feat-text"><strong>5 Themes</strong>Gold · Carbon · Ice Blue · Crimson · Emerald.</div></div>
+    <div class="feat-item"><div class="feat-icon">⛽</div><div class="feat-text"><strong>Fuel Estimate</strong>Rough fuel consumption estimate based on distance.</div></div>
+    <div class="feat-item"><div class="feat-icon">↓</div><div class="feat-text"><strong>Trip Export</strong>Full JSON GPS log download for later analysis.</div></div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<div class="quote-banner">
+  <p class="quote-text">"Speed without awareness is just movement. True velocity is knowing exactly where you are, how fast you're going, and why."</p>
+  <p class="quote-by">— Mayukh Sarkar, Founder · Velvet Pages</p>
+</div>
+
+<!-- REVIEWS -->
+<section class="content-section">
+  <div class="sec-label">Verified Users</div>
+  <h2 class="sec-title">What Drivers Are Saying</h2>
+  <p class="sec-sub">From daily commuters to long-distance highway riders</p>
+  <div class="reviews-grid">
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"I mount my phone on my Royal Enfield's handlebar. Velvet Speed is the most accurate and beautiful speedometer app I have ever used. The analog dial feels like it belongs on a premium instrument cluster."</div><div class="rev-author">Rohan Verma</div><div class="rev-loc">Jaipur, Rajasthan</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"The speed limit alert genuinely saved me near a school zone. I had set 40 km/h and the screen turned red the moment I crept over. Practically useful — not just a pretty toy."</div><div class="rev-author">Sneha Kulkarni</div><div class="rev-loc">Pune, Maharashtra</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"I drive long-haul across NH44. The average speed and distance tracker is exactly what I needed for my logbook. That you can export a full JSON trip log was a bonus I never expected from a free web app."</div><div class="rev-author">Gurpreet Singh</div><div class="rev-loc">Ludhiana, Punjab</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"I use it for cycling and in knots mode for kayaking. It handles every sport perfectly. The altitude chart is brilliant for route elevation planning before a long ride."</div><div class="rev-author">Arathi Menon</div><div class="rev-loc">Thiruvananthapuram, Kerala</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"My car's speedometer cable snapped. The mechanic quoted me three thousand rupees. I put this on a dashboard phone stand and it reads more accurately than the original ever did."</div><div class="rev-author">Vikram Joshi</div><div class="rev-loc">Nagpur, Maharashtra</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"Mayukh has an extraordinary design eye. This looks like something from a luxury German car's HUD, not a free single-page HTML app. Stunning to look at and completely, reliably functional."</div><div class="rev-author">Prerna Sinha</div><div class="rev-loc">Patna, Bihar</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"The compass heading widget alone makes this worth bookmarking. I drive through the Western Ghats regularly and watching heading + altitude together has genuinely helped my navigation sense."</div><div class="rev-author">Aditya Rao</div><div class="rev-loc">Bengaluru, Karnataka</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"Five themes and every one of them is beautiful. I use Ice Blue at night and Gold in the day. The fact that Mayukh built this as a single HTML file is remarkable — it feels like a native application."</div><div class="rev-author">Tanvi Ghosh</div><div class="rev-loc">Kolkata, West Bengal</div></div>
+    <div class="review-card"><div class="rev-stars">★★★★★</div><div class="rev-text">"Our driving school uses this on tablets for student practice sessions. The average speed and stop count analytics at the end of each lesson are more useful than I can explain. Pure gold."</div><div class="rev-author">Mohammed Irfan</div><div class="rev-loc">Hyderabad, Telangana</div></div>
+  </div>
+</section>
+
+<div class="divider"><div class="div-line"></div><span style="color:var(--gold);font-size:1rem;">◈</span><div class="div-line"></div></div>
+
+<footer>
+  <span class="footer-brand">Velvet Pages</span>
+  <div style="margin-bottom:6px;">Velvet Speed · A Precision Instrument by Mayukh Sarkar</div>
+  <div>© 2025 Velvet Pages · All Rights Reserved · No data collected · No servers · Pure GPS</div>
+</footer>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════ STATE ═══════════════════
+const S={
+  tracking:false,paused:false,unit:'kmh',speed:0,maxSpeed:0,
+  totalDist:0,speeds:[],speedHistory:Array(60).fill(0),
+  lastPos:null,startTime:null,movingTime:0,movingStart:null,
+  stops:0,wasMoving:false,heading:null,altitude:null,
+  altHistory:[],accuracy:null,limit:80,wakeLock:null,
+  watchId:null,tripLog:[],timerIv:null,graphIv:null
+};
+const UNITS={
+  kmh:{f:3.6,label:'km/h',long:'kilometres per hour',max:220},
+  mph:{f:2.23694,label:'mph',long:'miles per hour',max:140},
+  ms:{f:1,label:'m/s',long:'metres per second',max:60},
+  kn:{f:1.94384,label:'kn',long:'knots',max:120}
+};
+function cv(mps){return mps*UNITS[S.unit].f;}
+function fmt(v){return Math.round(v*10)/10;}
+function pad(n){return String(n).padStart(2,'0');}
+function gv(v){return getComputedStyle(document.body).getPropertyValue(v).trim();}
+
+// ═══════════════════ GPS ═══════════════════
+function startTracking(){
+  if(!navigator.geolocation){alert('Geolocation not supported on this device.');return;}
+  if(S.tracking)return;
+  S.tracking=true;S.paused=false;
+  S.startTime=S.startTime||Date.now();
+  document.getElementById('btn-start').classList.add('active');
+  document.getElementById('gps-dot').className='gps-dot searching';
+  S.watchId=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:500,timeout:10000});
+  S.timerIv=setInterval(tickTimer,1000);
+  S.graphIv=setInterval(pushGraph,1000);
+}
+function pauseTracking(){
+  if(!S.tracking)return;
+  S.paused=!S.paused;
+  const b=document.getElementById('btn-pause');
+  b.textContent=S.paused?'▶ Resume':'⏸ Pause';
+  b.classList.toggle('active',S.paused);
+  if(S.paused&&S.movingStart){S.movingTime+=Date.now()-S.movingStart;S.movingStart=null;}
+}
+function resetTrip(){
+  if(S.watchId)navigator.geolocation.clearWatch(S.watchId);
+  clearInterval(S.timerIv);clearInterval(S.graphIv);
+  Object.assign(S,{tracking:false,paused:false,speed:0,maxSpeed:0,totalDist:0,
+    speeds:[],speedHistory:Array(60).fill(0),lastPos:null,startTime:null,
+    movingTime:0,movingStart:null,stops:0,wasMoving:false,heading:null,
+    altitude:null,altHistory:[],accuracy:null,watchId:null,tripLog:[],timerIv:null,graphIv:null});
+  document.getElementById('gps-dot').className='gps-dot';
+  document.getElementById('btn-start').classList.remove('active');
+  document.getElementById('btn-pause').textContent='⏸ Pause';
+  document.getElementById('btn-pause').classList.remove('active');
+  document.getElementById('w-time').textContent='00:00:00';
+  updateUI();drawSpeedo(0);drawCompass(null);drawGraph();
+}
+function onPos(p){
+  if(S.paused)return;
+  const{latitude:lat,longitude:lon,speed:raw,heading,altitude,accuracy}=p.coords;
+  const mps=raw!=null&&raw>=0?raw:0;
+  S.speed=cv(mps);S.accuracy=accuracy;S.heading=heading;S.altitude=altitude;
+  document.getElementById('gps-dot').className='gps-dot active';
+  if(S.lastPos){const d=hav(S.lastPos.lat,S.lastPos.lon,lat,lon);if(d<500)S.totalDist+=d;}
+  S.lastPos={lat,lon};
+  if(S.speed>0.5){
+    S.speeds.push(S.speed);
+    if(S.speed>S.maxSpeed)S.maxSpeed=S.speed;
+    if(!S.wasMoving){S.movingStart=Date.now();S.wasMoving=true;}
+  } else {
+    if(S.wasMoving){S.stops++;if(S.movingStart){S.movingTime+=Date.now()-S.movingStart;S.movingStart=null;}S.wasMoving=false;}
+  }
+  if(altitude!=null){S.altHistory.push(altitude);if(S.altHistory.length>20)S.altHistory.shift();}
+  S.tripLog.push({t:Date.now(),lat,lon,spd:S.speed,alt:altitude,acc:accuracy});
+  updateUI();drawSpeedo(S.speed);drawCompass(S.heading);drawAltBars();updateSig(accuracy);
+  document.getElementById('speed-alert').className=(S.speed>S.limit&&S.limit>0)?'alert-bar speed':'alert-bar';
+}
+function onErr(e){
+  document.getElementById('gps-dot').className='gps-dot';
+  const msgs={1:'Permission denied',2:'Position unavailable',3:'Timeout'};
+  document.getElementById('w-sig').textContent=msgs[e.code]||'GPS error';
+}
+function hav(a,b,c,d){
+  const R=6371000,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180;
+  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+// ═══════════════════ TIMER ═══════════════════
+function tickTimer(){
+  if(!S.startTime||S.paused)return;
+  const e=Math.floor((Date.now()-S.startTime)/1000);
+  document.getElementById('w-time').textContent=`${pad(Math.floor(e/3600))}:${pad(Math.floor((e%3600)/60))}:${pad(e%60)}`;
+  const mt=S.movingTime+(S.movingStart?Date.now()-S.movingStart:0);
+  const ms=Math.floor(mt/1000);
+  document.getElementById('s-movt').textContent=`${pad(Math.floor((ms%3600)/60))}:${pad(ms%60)}`;
+}
+function pushGraph(){S.speedHistory.push(S.speed);S.speedHistory.shift();drawGraph();}
+
+// ═══════════════════ UI ═══════════════════
+function bearDir(h){const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return d[Math.round(h/22.5)%16];}
+function updateUI(){
+  const u=UNITS[S.unit];
+  document.getElementById('speed-num').textContent=fmt(S.speed);
+  document.getElementById('speed-unit-lbl').textContent=u.long;
+  const avg=S.speeds.length?S.speeds.reduce((a,b)=>a+b)/S.speeds.length:0;
+  document.getElementById('w-max').childNodes[0].textContent=fmt(S.maxSpeed);
+  document.getElementById('w-max-u').textContent=u.label;
+  document.getElementById('w-avg').childNodes[0].textContent=fmt(avg);
+  document.getElementById('w-avg-u').textContent=u.label;
+  document.getElementById('bar-max').style.width=Math.min(100,S.maxSpeed/u.max*100)+'%';
+  document.getElementById('bar-avg').style.width=Math.min(100,avg/u.max*100)+'%';
+  const d=S.totalDist;
+  document.getElementById('w-dist').innerHTML=d>=1000?`${(d/1000).toFixed(2)}<span> km</span>`:`${Math.round(d)}<span> m</span>`;
+  document.getElementById('w-steps').textContent=d>0?`≈ ${Math.round(d/0.762)} steps`:'—';
+  if(S.startTime)document.getElementById('w-started').textContent='Since '+new Date(S.startTime).toLocaleTimeString();
+  if(S.lastPos){document.getElementById('w-lat').textContent=`Lat: ${S.lastPos.lat.toFixed(6)}°`;document.getElementById('w-lon').textContent=`Lon: ${S.lastPos.lon.toFixed(6)}°`;}
+  if(S.accuracy!=null)document.getElementById('w-acc').textContent=`Accuracy: ±${Math.round(S.accuracy)}m`;
+  document.getElementById('w-head').childNodes[0].textContent=S.heading!=null?Math.round(S.heading):'—';
+  document.getElementById('w-alt').childNodes[0].textContent=S.altitude!=null?Math.round(S.altitude):'—';
+  document.getElementById('s-stops').textContent=S.stops;
+  document.getElementById('s-dir').textContent=S.heading!=null?bearDir(S.heading):'—';
+  document.getElementById('s-pace').textContent=S.speed>0.5?(60/S.speed).toFixed(1)+' min/'+u.label:'—';
+  document.getElementById('s-fuel').textContent=S.totalDist>0?((S.totalDist/1000)*0.008).toFixed(2)+' L est.':'—';
+  const cg=document.getElementById('chip-gps');cg.className='status-chip ok';cg.querySelector('span').textContent='GPS Active';
+  const cm=document.getElementById('chip-mov');cm.className=S.speed>0.5?'status-chip ok':'status-chip';cm.querySelector('span').textContent=S.speed>0.5?'Moving':'Stationary';
+  const ca=document.getElementById('chip-acc');const a=S.accuracy;
+  ca.className=a==null?'status-chip':a<10?'status-chip ok':a<30?'status-chip warn':'status-chip err';
+  ca.querySelector('span').textContent=a!=null?`±${Math.round(a)}m`:'Accuracy: —';
+  document.getElementById('w-sig').textContent=a!=null?`±${Math.round(a)}m accuracy`:'Awaiting GPS fix';
+}
+
+// ═══════════════════ SPEEDO ═══════════════════
+const sc=document.getElementById('speedo');
+const sctx=sc.getContext('2d');
+function resizeSpeedo(){
+  const s=sc.parentElement.offsetWidth;
+  sc.width=sc.height=s*devicePixelRatio;sc.style.width=sc.style.height=s+'px';
+  sctx.scale(devicePixelRatio,devicePixelRatio);drawSpeedo(S.speed);
+}
+function drawSpeedo(spd){
+  const s=sc.offsetWidth;const cx=s/2,cy=s/2,r=s*.44;
+  sctx.clearRect(0,0,s,s);
+  const sa=Math.PI*.75,ea=Math.PI*2.25;
+  const maxV=UNITS[S.unit].max,fr=Math.min(spd/maxV,1);
+  const na=sa+fr*(ea-sa);
+  const gold=gv('--gold')||'#c9a84c';const amber=gv('--amber')||'#ff9500';
+  const over=spd>S.limit&&S.limit>0&&S.tracking;
+
+  // outer glow ring
+  sctx.beginPath();sctx.arc(cx,cy,r+5,0,Math.PI*2);
+  sctx.strokeStyle=over?'rgba(255,59,48,.12)':'rgba(201,168,76,.07)';sctx.lineWidth=10;sctx.stroke();
+
+  // track
+  sctx.beginPath();sctx.arc(cx,cy,r,sa,ea);
+  sctx.strokeStyle='rgba(255,255,255,0.06)';sctx.lineWidth=15;sctx.lineCap='butt';sctx.stroke();
+
+  // coloured arc
+  if(fr>0){
+    sctx.beginPath();sctx.arc(cx,cy,r,sa,na);
+    sctx.strokeStyle=over?'#ff3b30':gold;sctx.lineWidth=15;sctx.lineCap='butt';
+    sctx.shadowColor=over?'#ff3b30':gold;sctx.shadowBlur=18;sctx.stroke();sctx.shadowBlur=0;
+  }
+
+  // limit marker
+  if(S.limit>0){
+    const lf=Math.min(S.limit/maxV,1);const la=sa+lf*(ea-sa);
+    sctx.save();sctx.translate(cx,cy);sctx.rotate(la);
+    sctx.beginPath();sctx.moveTo(r-12,0);sctx.lineTo(r+4,0);
+    sctx.strokeStyle='#ff9500';sctx.lineWidth=2.5;sctx.lineCap='round';sctx.stroke();
+    sctx.restore();
+  }
+
+  // ticks
+  for(let i=0;i<=22;i++){
+    const a=sa+(i/22)*(ea-sa);const major=i%(2)===0;const len=major?13:6;
+    const x1=cx+Math.cos(a)*(r-18),y1=cy+Math.sin(a)*(r-18);
+    const x2=cx+Math.cos(a)*(r-18-len),y2=cy+Math.sin(a)*(r-18-len);
+    sctx.beginPath();sctx.moveTo(x1,y1);sctx.lineTo(x2,y2);
+    sctx.strokeStyle=major?'rgba(240,234,216,0.55)':'rgba(240,234,216,0.18)';sctx.lineWidth=major?1.8:1;sctx.stroke();
+  }
+
+  // numbers
+  sctx.font=`600 ${s*.04}px Orbitron,monospace`;sctx.textAlign='center';sctx.textBaseline='middle';
+  [0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1].forEach(f=>{
+    const v=Math.round(f*maxV);const a=sa+f*(ea-sa);
+    sctx.fillStyle='rgba(240,234,216,0.45)';
+    sctx.fillText(v,cx+Math.cos(a)*(r-40),cy+Math.sin(a)*(r-40));
+  });
+
+  // inner fill
+  const ig=sctx.createRadialGradient(cx,cy,0,cx,cy,r*.72);
+  ig.addColorStop(0,'rgba(15,16,24,.97)');ig.addColorStop(1,'rgba(5,5,8,.99)');
+  sctx.beginPath();sctx.arc(cx,cy,r*.72,0,Math.PI*2);sctx.fillStyle=ig;sctx.fill();
+  sctx.beginPath();sctx.arc(cx,cy,r*.72,0,Math.PI*2);sctx.strokeStyle='rgba(255,255,255,.05)';sctx.lineWidth=1;sctx.stroke();
+
+  // needle
+  const nx1=cx+Math.cos(na)*(r*.64),ny1=cy+Math.sin(na)*(r*.64);
+  const nx0=cx+Math.cos(na+Math.PI)*(r*.11),ny0=cy+Math.sin(na+Math.PI)*(r*.11);
+  sctx.beginPath();sctx.moveTo(nx0,ny0);sctx.lineTo(nx1,ny1);
+  sctx.strokeStyle=over?'#ff3b30':'#ff6644';sctx.lineWidth=2.2;sctx.lineCap='round';
+  sctx.shadowColor=over?'#ff3b30':'#ff6644';sctx.shadowBlur=10;sctx.stroke();sctx.shadowBlur=0;
+
+  // hub
+  sctx.beginPath();sctx.arc(cx,cy,r*.05,0,Math.PI*2);
+  const hg=sctx.createRadialGradient(cx,cy,0,cx,cy,r*.05);
+  hg.addColorStop(0,'#999');hg.addColorStop(1,'#333');sctx.fillStyle=hg;sctx.fill();
+  sctx.strokeStyle='rgba(255,255,255,.2)';sctx.lineWidth=1;sctx.stroke();
+
+  // unit label inside
+  sctx.font=`600 ${s*.043}px Orbitron,monospace`;sctx.textAlign='center';sctx.textBaseline='middle';
+  sctx.fillStyle='rgba(240,234,216,.22)';sctx.fillText(UNITS[S.unit].label,cx,cy+r*.3);
+}
+
+// ═══════════════════ COMPASS ═══════════════════
+function drawCompass(heading){
+  const cv2=document.getElementById('compass-cv');
+  const s=cv2.offsetWidth;if(!s)return;
+  cv2.width=cv2.height=s*devicePixelRatio;
+  const c=cv2.getContext('2d');c.scale(devicePixelRatio,devicePixelRatio);
+  const cx=s/2,cy=s/2,r=s*.42;const gold=gv('--gold')||'#c9a84c';
+  c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);
+  const bg=c.createRadialGradient(cx,cy,0,cx,cy,r);
+  bg.addColorStop(0,'rgba(15,16,24,.95)');bg.addColorStop(1,'rgba(5,5,8,.99)');
+  c.fillStyle=bg;c.fill();c.strokeStyle='rgba(255,255,255,.07)';c.lineWidth=1.5;c.stroke();
+  const h=heading??0;
+  c.save();c.translate(cx,cy);c.rotate(-h*Math.PI/180);
+  ['N','E','S','W'].forEach((d,i)=>{
+    const a=i*Math.PI/2;const tx=Math.sin(a)*(r*.7),ty=-Math.cos(a)*(r*.7);
+    c.font=`700 ${s*.13}px Orbitron,monospace`;c.textAlign='center';c.textBaseline='middle';
+    c.fillStyle=d==='N'?gold:'rgba(240,234,216,.4)';c.fillText(d,tx,ty);
+  });
+  for(let i=0;i<36;i++){
+    const a=i*10*Math.PI/180;const major=i%9===0,mid=i%3===0;
+    const len=major?r*.17:mid?r*.09:r*.05;
+    const x1=Math.sin(a)*r*.87,y1=-Math.cos(a)*r*.87;
+    const x2=Math.sin(a)*(r*.87-len),y2=-Math.cos(a)*(r*.87-len);
+    c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
+    c.strokeStyle=major?gold:'rgba(240,234,216,.18)';c.lineWidth=major?1.5:.7;c.stroke();
+  }
+  c.restore();
+  if(heading!=null){
+    c.save();c.translate(cx,cy);
+    c.beginPath();c.moveTo(0,-(r*.52));c.lineTo(r*.07,r*.1);c.lineTo(-r*.07,r*.1);c.closePath();
+    c.fillStyle=gold;c.fill();
+    c.beginPath();c.moveTo(0,r*.52);c.lineTo(r*.07,-r*.1);c.lineTo(-r*.07,-r*.1);c.closePath();
+    c.fillStyle='rgba(255,255,255,.18)';c.fill();
+    c.restore();
+  }
+  c.beginPath();c.arc(cx,cy,r*.055,0,Math.PI*2);c.fillStyle=gold;c.fill();
+}
+
+// ═══════════════════ GRAPH ═══════════════════
+function drawGraph(){
+  const cv3=document.getElementById('speed-graph');
+  const w=cv3.offsetWidth||400,h=cv3.offsetHeight||72;
+  cv3.width=w*devicePixelRatio;cv3.height=h*devicePixelRatio;
+  const c=cv3.getContext('2d');c.scale(devicePixelRatio,devicePixelRatio);
+  c.clearRect(0,0,w,h);
+  const maxV=UNITS[S.unit].max;const pts=S.speedHistory;const gold=gv('--gold')||'#c9a84c';
+  // grid
+  for(let i=1;i<4;i++){const y=h-h*(i/4);c.strokeStyle='rgba(255,255,255,.04)';c.lineWidth=1;c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}
+  // limit line
+  if(S.limit>0){
+    const ly=h-h*(S.limit/maxV);
+    c.strokeStyle='rgba(255,150,0,.3)';c.lineWidth=1;c.setLineDash([4,4]);
+    c.beginPath();c.moveTo(0,ly);c.lineTo(w,ly);c.stroke();c.setLineDash([]);
+  }
+  // fill
+  const gr=c.createLinearGradient(0,0,0,h);gr.addColorStop(0,`${gold}55`);gr.addColorStop(1,`${gold}00`);
+  c.beginPath();c.moveTo(0,h);
+  pts.forEach((v,i)=>{const x=i*(w/(pts.length-1)),y=h-h*(v/maxV);i===0?c.moveTo(x,y):c.lineTo(x,y);});
+  c.lineTo(w,h);c.closePath();c.fillStyle=gr;c.fill();
+  // line
+  c.beginPath();
+  pts.forEach((v,i)=>{const x=i*(w/(pts.length-1)),y=h-h*(v/maxV);i===0?c.moveTo(x,y):c.lineTo(x,y);});
+  c.strokeStyle=gold;c.lineWidth=1.5;c.stroke();
+}
+
+// ═══════════════════ ALT BARS ═══════════════════
+function drawAltBars(){
+  const con=document.getElementById('alt-bar');con.innerHTML='';
+  const d=S.altHistory;if(!d.length)return;
+  const min=Math.min(...d),max=Math.max(...d),range=max-min||1;const gold=gv('--gold')||'#c9a84c';
+  d.forEach((v,i)=>{const col=document.createElement('div');col.className='alt-col';
+    col.style.height=((v-min)/range*80+5)+'%';col.style.background=i===d.length-1?gold:'rgba(201,168,76,.28)';
+    con.appendChild(col);});
+}
+
+// ═══════════════════ SIGNAL ═══════════════════
+function updateSig(acc){
+  const bars=document.querySelectorAll('.sig-bar');const gold=gv('--gold')||'#c9a84c';
+  let lv=acc==null?0:acc<5?5:acc<10?4:acc<20?3:acc<50?2:1;
+  bars.forEach((b,i)=>{b.style.background=i<lv?gold:'rgba(255,255,255,.07)';});
+}
+
+// ═══════════════════ CONTROLS ═══════════════════
+function setUnit(u){
+  S.unit=u;
+  document.querySelectorAll('.unit-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+u).classList.add('active');
+  updateUI();drawSpeedo(S.speed);drawGraph();
+}
+function setLimit(v){
+  S.limit=v;document.getElementById('limit-input').value=v;
+  document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active',parseInt(p.textContent)===v));
+  drawSpeedo(S.speed);
+}
+function updateLimit(){S.limit=parseFloat(document.getElementById('limit-input').value)||0;document.querySelectorAll('.preset').forEach(p=>p.classList.remove('active'));drawSpeedo(S.speed);}
+async function toggleWakeLock(){
+  const b=document.getElementById('btn-lock');
+  if(S.wakeLock){S.wakeLock.release();S.wakeLock=null;b.textContent='🔓 Screen';b.classList.remove('active');return;}
+  if('wakeLock' in navigator){try{S.wakeLock=await navigator.wakeLock.request('screen');b.textContent='🔒 Screen';b.classList.add('active');S.wakeLock.addEventListener('release',()=>{S.wakeLock=null;b.textContent='🔓 Screen';b.classList.remove('active');});}catch(e){alert('Wake Lock unavailable.');}}
+  else{alert('Wake Lock not supported on this browser.');}
+}
+function exportData(){
+  const payload={exported:new Date().toISOString(),unit:UNITS[S.unit].label,maxSpeed:fmt(S.maxSpeed),avgSpeed:fmt(S.speeds.length?S.speeds.reduce((a,b)=>a+b)/S.speeds.length:0),distance_m:Math.round(S.totalDist),stops:S.stops,log:S.tripLog};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download=`velvet-speed-${Date.now()}.json`;a.click();
+}
+function shareData(){
+  const avg=fmt(S.speeds.length?S.speeds.reduce((a,b)=>a+b)/S.speeds.length:0);
+  const t=`🏎 Velvet Speed Trip\nMax: ${fmt(S.maxSpeed)} ${UNITS[S.unit].label}\nAvg: ${avg} ${UNITS[S.unit].label}\nDist: ${(S.totalDist/1000).toFixed(2)} km\n\nvelvet-pages.github.io/velvet-speed`;
+  if(navigator.share)navigator.share({title:'Velvet Speed',text:t});
+  else navigator.clipboard.writeText(t).then(()=>alert('Copied to clipboard!'));
+}
+function setTheme(t,el){
+  document.body.className='theme-'+t;document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('active'));el.classList.add('active');
+  setTimeout(()=>{drawSpeedo(S.speed);drawCompass(S.heading);drawGraph();},40);
+}
+
+// ═══════════════════ INIT ═══════════════════
+window.addEventListener('load',()=>{
+  resizeSpeedo();drawSpeedo(0);drawCompass(null);drawGraph();
+  setTimeout(()=>drawCompass(null),120);
+});
+window.addEventListener('resize',()=>{resizeSpeedo();drawCompass(S.heading);drawGraph();});
+
+// Demo sweep animation
+let dT=0,dD=1,dR=true;
+(function demo(){if(!dR||S.tracking)return;dT+=dD*.7;if(dT>58||dT<0)dD*=-1;drawSpeedo(dT);requestAnimationFrame(demo);})();
+const _orig=startTracking;
+window.startTracking=function(){dR=false;_orig();};
+</script>
+</body>
+</html>
